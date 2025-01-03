@@ -1,0 +1,42 @@
+[
+ {
+  "Description": "Identified a pattern that may indicate AWS credentials, risking unauthorized cloud resource access and data breaches on AWS platforms.",
+  "StartLine": 11,
+  "EndLine": 11,
+  "StartColumn": 15,
+  "EndColumn": 34,
+  "Match": "AKIAJAA49FFSFRFN6CCC",
+  "Secret": "AKIAJAA49FFSFRFN6CCC",
+  "File": "/code/repo/bad-vars.tf",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.2841837,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "RuleID": "aws-access-token",
+  "Fingerprint": "/code/repo/bad-vars.tf:aws-access-token:11"
+ },
+ {
+  "Description": "Identified a pattern that may indicate AWS credentials, risking unauthorized cloud resource access and data breaches on AWS platforms.",
+  "StartLine": 13,
+  "EndLine": 13,
+  "StartColumn": 2,
+  "EndColumn": 21,
+  "Match": "AKIAJAA49FFSFRFN6BBB",
+  "Secret": "AKIAJAA49FFSFRFN6BBB",
+  "File": "/code/repo/README.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.2841837,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "RuleID": "aws-access-token",
+  "Fingerprint": "/code/repo/README.md:aws-access-token:13"
+ }
+]
