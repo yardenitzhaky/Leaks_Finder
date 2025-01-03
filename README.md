@@ -35,7 +35,14 @@ For example usage, enter the testing directory and run:
 
 ```bash
 cd fake-public-secrets
-../run.sh directory .
+../run.sh 
+```
+
+or for certain directory:
+
+
+```bash
+../run.sh directory *directory path*
 ```
 
 ###  Output Format
