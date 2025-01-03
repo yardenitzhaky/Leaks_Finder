@@ -1,0 +1,46 @@
+# Python virtual environments
+venv/
+env/
+ENV/
+.env/
+.venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.docker/
+*.log
+
+# Project specific
+output.json
+fake-public-secrets/
+Control_Candidate_Task*.pdf
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local development
+*.env
+.env.local
+.env.*.local
+
+# System Files
+.DS_Store
+Thumbs.db
