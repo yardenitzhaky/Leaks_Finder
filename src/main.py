@@ -3,7 +3,7 @@ import subprocess
 import sys
 from typing import Union
 
-from models import Finding, GitLeaksResponse
+from models import Finding, GitLeaksResults, ErrorResponse, GitLeaksResponse
 
 def run_gitleaks(args: list[str]) -> tuple[int, str]:
     try:
@@ -37,7 +37,7 @@ def run_gitleaks(args: list[str]) -> tuple[int, str]:
     except Exception as e:
         return 2, f"Failed to run gitleaks: {str(e)}"
 
-def process_gitleaks_output(json_file_path: str) -> Union[list[Finding], tuple[int, str]]:
+def process_gitleaks_output(json_file_path: str) -> Union[GitLeaksResults, ErrorResponse]:
     try:
         # Open the JSON file
         with open(json_file_path, 'r') as f:
@@ -56,10 +56,13 @@ def process_gitleaks_output(json_file_path: str) -> Union[list[Finding], tuple[i
                 description=finding.get('description', finding.get('Description', 'Potential secret found'))
             ))
             
-        return findings
+        return GitLeaksResults(findings=findings)
             
     except Exception as e:
-        return 2, f"Failed to process gitleaks output: {str(e)}"
+        return ErrorResponse(
+            exit_code=2,
+            error_message=f"Failed to process gitleaks output: {str(e)}"
+        )
     
 def main():
     # Create response object
@@ -72,21 +75,30 @@ def main():
     
     # Handle the various exit codes and output processing
     if exit_code == 126:
-        response.exit_code = exit_code
-        response.error_message = output
+       error_response = ErrorResponse(
+            exit_code=exit_code,
+            error_message=output
+        )
+       response.exit_code = error_response.exit_code
+       response.error_message = error_response.error_message
     elif exit_code != 0:
-        response.exit_code = exit_code
-        response.error_message = f"Gitleaks scan failed: {output}"
+        error_response = ErrorResponse(
+            exit_code=exit_code,
+            error_message=f"Gitleaks scan failed: {output}"
+        )
+        response.exit_code = error_response.exit_code
+        response.error_message = error_response.error_message
     else:
         # Process successful output (including when leaks were found)
         result = process_gitleaks_output("/code/repo/output.json")
         
-        if isinstance(result, tuple):
+        if isinstance(result, ErrorResponse):
             # Handle processing error
-            response.exit_code, response.error_message = result
+            response.exit_code = result.exit_code
+            response.error_message = result.error_message
         else:
             # Handle success case
-            response.findings = result
+            response.findings = result.findings
     
     # Print the formatted output
     result = response.model_dump_json(exclude_none=True, indent=2)
