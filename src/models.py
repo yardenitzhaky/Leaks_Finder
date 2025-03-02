@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 # Model representing a single finding
@@ -10,6 +10,8 @@ class Finding(BaseModel):
 # Model representing the results
 class GitLeaksResults(BaseModel):
     findings: List[Finding]
+    scan_duration_ms: Optional[int] = None
+    total_files_scanned: Optional[int] = None
 
 # Model representing an error response
 class ErrorResponse(BaseModel):
@@ -21,3 +23,4 @@ class GitLeaksResponse(BaseModel):
     findings: Optional[List[Finding]] = None  # Optional list of findings
     exit_code: Optional[int] = None  # Optional exit code
     error_message: Optional[str] = None  # Optional error message
+    scan_summary: Optional[Dict[str, Any]] = None  # Scan statistics

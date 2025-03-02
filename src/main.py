@@ -1,8 +1,9 @@
 import json
 import subprocess
 import sys
+import time
+import os
 from typing import Union
-
 from models import Finding, GitLeaksResults, ErrorResponse, GitLeaksResponse
 
 def run_gitleaks(args: list[str]) -> tuple[int, str]:
@@ -10,6 +11,8 @@ def run_gitleaks(args: list[str]) -> tuple[int, str]:
         # Set default arguments if none provided
         if not args:
             args = ["directory", "/code/repo", "--report-path", "/code/repo/output.json"]
+            
+        print(f"Running command: gitleaks {' '.join(args)}", file=sys.stderr)
 
         result = subprocess.run(
             ["gitleaks"] + args,
@@ -18,8 +21,7 @@ def run_gitleaks(args: list[str]) -> tuple[int, str]:
             check=False
         )
         
-        
-       # Handle exit codes according to gitleaks docs
+        # Handle exit codes according to gitleaks docs
         if result.returncode == 0:  # no leaks present
             return 0, result.stdout or result.stderr
         elif result.returncode == 1:  # leaks or error encountered
@@ -37,13 +39,31 @@ def run_gitleaks(args: list[str]) -> tuple[int, str]:
     except Exception as e:
         return 2, f"Failed to run gitleaks: {str(e)}"
 
-def process_gitleaks_output(json_file_path: str) -> Union[GitLeaksResults, ErrorResponse]:
+def count_unique_files(scan_path):
+    """Count files in directory using a simple file system walk"""
+    if not os.path.exists(scan_path):
+        return 0
+        
+    if os.path.isfile(scan_path):
+        return 1
+        
+    file_count = 0
+    for root, _, files in os.walk(scan_path):
+        # Skip .git directory
+        if ".git" in root.split(os.sep):
+            continue
+        file_count += len(files)
+    
+    return file_count
+
+def process_gitleaks_output(json_file_path: str, scan_path: str = "/code/repo") -> Union[GitLeaksResults, ErrorResponse]:
     try:
         # Open the JSON file
         with open(json_file_path, 'r') as f:
             data = json.load(f)
             
         findings = []
+        
         # Handle both list and dictionary formats from Gitleaks
         if isinstance(data, dict):
             data = data.get('findings', [])
@@ -55,8 +75,18 @@ def process_gitleaks_output(json_file_path: str) -> Union[GitLeaksResults, Error
                 line_range=f"{finding.get('startLine', finding.get('StartLine', ''))}-{finding.get('endLine', finding.get('EndLine', ''))}",
                 description=finding.get('description', finding.get('Description', 'Potential secret found'))
             ))
-            
-        return GitLeaksResults(findings=findings)
+        
+        # Count unique filenames in findings
+        unique_files = set()
+        for finding in findings:
+            unique_files.add(finding.filename)
+        
+        # Get file count from the filesystem
+        total_files = count_unique_files(scan_path)
+        
+        result = GitLeaksResults(findings=findings)
+        result.total_files_scanned = total_files
+        return result
             
     except Exception as e:
         return ErrorResponse(
@@ -65,10 +95,18 @@ def process_gitleaks_output(json_file_path: str) -> Union[GitLeaksResults, Error
         )
     
 def main():
+    start_time = time.time()
+
     # Create response object
     response = GitLeaksResponse()
     
     print("Starting Gitleaks scan...", file=sys.stderr)
+    
+    # Determine scan path from arguments
+    scan_path = "/code/repo"
+    for i, arg in enumerate(sys.argv[1:]):
+        if arg == "directory" and i+1 < len(sys.argv[1:]):
+            scan_path = sys.argv[i+2]
     
     # Run gitleaks without the first argument (script name)
     exit_code, output = run_gitleaks(sys.argv[1:])
@@ -90,7 +128,7 @@ def main():
         response.error_message = error_response.error_message
     else:
         # Process successful output (including when leaks were found)
-        result = process_gitleaks_output("/code/repo/output.json")
+        result = process_gitleaks_output("/code/repo/output.json", scan_path)
         
         if isinstance(result, ErrorResponse):
             # Handle processing error
@@ -99,17 +137,31 @@ def main():
         else:
             # Handle success case
             response.findings = result.findings
+            response.scan_summary = {
+                "duration_ms": int((time.time() - start_time) * 1000),
+                "total_files_scanned": result.total_files_scanned,
+                "files_with_secrets": len(set(f.filename for f in result.findings)) if result.findings else 0
+            }
     
-    # Print the formatted output
-    result = response.model_dump_json(exclude_none=True, indent=2)
-    if response.findings == []:
+    # Print the results to stderr for user feedback
+    if not response.findings:
         print("No secrets were found in the scanned files.", file=sys.stderr)
     elif response.error_message:
         print(f"Error occurred: {response.error_message}", file=sys.stderr)
     else:
-        print(f"Found {len(response.findings)} potential secrets.", file=sys.stderr)
+        unique_files_with_secrets = len(set(f.filename for f in response.findings))
+        print(
+            f"Found {len(response.findings)} potential secrets in {unique_files_with_secrets} files.", 
+            file=sys.stderr
+        )
+        print(
+            f"Scan completed in {response.scan_summary.get('duration_ms', 0)/1000:.2f} seconds.", 
+            file=sys.stderr
+        )
     
-    print(result)
+    # Convert the response to JSON and print to stdout
+    json_output = response.model_dump_json(exclude_none=True, indent=2)
+    print(json_output)
     
     # Exit with appropriate code
     sys.exit(response.exit_code if response.exit_code is not None else 0)
