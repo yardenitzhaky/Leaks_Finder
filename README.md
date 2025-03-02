@@ -4,16 +4,19 @@ This mini-project provides a Docker-based wrapper around the Gitleaks secret det
 
 ## ✨ Features
 
--  Combines Gitleaks secret detection with Python processing
--  Provides structured JSON output using Pydantic models
--  Supports flexible command-line arguments
+- Combines Gitleaks secret detection with Python processing
+- Provides structured JSON output using Pydantic models
+- Supports flexible command-line arguments
 - ⚠ Includes comprehensive error handling
 - 🛠 Uses Docker for consistent environment and easy deployment
+- 📊 Includes scan metrics (duration, files scanned, files with secrets)
+- 🔍 Reports unique files with secrets for targeted remediation
+- ⏱️ Performance tracking with scan duration metrics
 
 ## 📖 Prerequisites
 
--  Docker installed on your system
--  Git (for repository scanning)
+- Docker installed on your system
+- Git (for repository scanning)
 
 ## 📥 Installation
 
@@ -28,7 +31,7 @@ This mini-project provides a Docker-based wrapper around the Gitleaks secret det
    chmod +x run.sh
    ```
 
-##  Usage
+## Usage
 
 The wrapper can be run using the provided `run.sh` script, which handles building and running the Docker container.
 For example usage, enter the testing directory and run:
@@ -40,12 +43,11 @@ cd fake-public-secrets
 
 or for certain directory:
 
-
 ```bash
 ../run.sh directory *directory path*
 ```
 
-###  Output Format
+### Output Format
 
 The tool outputs JSON in the following format for successful scans:
 
@@ -57,7 +59,12 @@ The tool outputs JSON in the following format for successful scans:
       "line_range": "11-11",
       "description": "Identified a pattern that may indicate AWS ..."
     }
-  ]
+  ],
+  "scan_summary": {
+    "duration_ms": 358,
+    "total_files_scanned": 42,
+    "files_with_secrets": 3
+  }
 }
 ```
 
@@ -72,13 +79,14 @@ For errors, the output will be:
 
 ## ❗ Error Codes
 
--  **0**: Success (no leaks found or scan completed with findings)
--  **2**: Error (scan failed or invalid arguments)
--  **126**: Unknown command flag
+- **0**: Success (no leaks found or scan completed with findings)
+- **2**: Error (scan failed or invalid arguments)
+- **126**: Unknown command flag
 
 ## 💡 Notes
 
 - The wrapper uses **Gitleaks version 8.19.0** or later, which has updated command syntax.
 - All paths in the container are relative to `/code/repo/`.
 - The current working directory is mounted at `/code/repo/` in the container.
-
+- The scanner now reports detailed metrics about your scan, including total files scanned and scan duration.
+- Console output provides a summary of findings while the JSON output contains detailed information.
